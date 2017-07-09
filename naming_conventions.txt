@@ -1,0 +1,30 @@
+### Naming Conventions in Mined & Keystone:
+
+
+
+- Normally in Java, methods follow the "lowerCamelCase()" convention, and variables, also, the "lowerCamelCase" convention;
+
+and in Python, methods follow the "lowercase_separated_by_underscores()" and variables also follow the "lowercase_separated_by_underscores" convention;
+
+however, in Mined and Keystone, we differentiate between the two, and for methods use the "lowercase_separated_by_underscores()", and for variables use "lowerCamelCase". -
+
+      
+
+	*RULES*
+
+1. File (module) name should be one word and lowercased: those that need separation will be done so with '-': file.py, file-with-bar.py,
+
+
+2. Class names should be upper camel case as follows: "ClassName",
+
+
+3. Functions or variables only used within a class should begin with '_' (underscore): _functions_within_class(), _variables_within_class,
+
+
+4. Function names should be written in the following underscore format: function_name(),
+
+
+5. Variables should be lower camel case as follows: "variableLowerCase", where the first character is lowercase; or as "lowercase_separated_by_underscores" format,
+
+
+6. Constant variables should be capitalized with underscores: "CONSTANT_VARIABLE".
