@@ -6,22 +6,23 @@ import pandas as pd
 from pymongo import MongoClient
 
 TR_REQ_TIME_INTERVAL = 0.2
+
 USER = "minestoned"
 PW = "moneyisnoweverythingdawg"
 IP = "45.55.86.183"
 DB = "stock"
-
-class MongoConnector:
-    def __init__(self, user, password, ip_address, db_name):
-        self.client = MongoClient("mongodb://{0}:{1}@{2}/{3}".format(user, password, ip_address, db_name))
 
 class Kiwoom(QAxWidget):
     def __init__(self):
         super().__init__()
         self._create_kiwoom_instance()
         self._set_signal_slots()
-        self._mongo = MongoConnector(USER, PW, IP, DB).client[DB]
-        self._code = ""
+
+    def prepare_data(self):
+        self.data = {"ohlcv": [], "buy": [], "sell": []}
+
+    def _add_data(self, type, data):
+        self.data[type].insert(0, data)
 
     def _create_kiwoom_instance(self):
         self.setControl("KHOPENAPI.KHOpenAPICtrl.1")
@@ -53,8 +54,6 @@ class Kiwoom(QAxWidget):
         return code_name
 
     def set_input_value(self, id, value):
-        if id == "종목코드":
-            self._code = value
         self.dynamicCall("SetInputValue(QString, QString)", id, value)
 
     def comm_rq_data(self, rqname, trcode, next, screen_no):
@@ -79,6 +78,8 @@ class Kiwoom(QAxWidget):
 
         if rqname == "opt10081_req":
             self._opt10081(rqname, trcode)
+        elif rqname == "opt10059_req":
+            self._opt10059(rqname, trcode)
 
         try:
             self.tr_event_loop.exit()
@@ -96,42 +97,104 @@ class Kiwoom(QAxWidget):
             close = self._comm_get_data(trcode, "", rqname, i, "현재가")
             volume = self._comm_get_data(trcode, "", rqname, i, "거래량")
 
-            update_data = {"date": date, \
-                           "open": open, \
-                           "high": high, \
-                           "low": low, \
-                           "close": close, \
-                           "volume": volume}
+            update_data = {"date": int(date), \
+                           "open": int(open), \
+                           "high": int(high), \
+                           "low": int(low), \
+                           "close": int(close), \
+                           "volume": int(volume)}
 
-            self._mongo['practice'].update({"code": self._code}, \
-                               {"$push": {"ohlcv" : update_data}}, upsert=True)
+            self._add_data("ohlcv", update_data)
+
+    def _opt10059(self, rqname, trcode):
+        data_cnt = self._get_repeat_cnt(trcode, rqname)
+
+        for i in range(data_cnt):
+            date = self._comm_get_data(trcode, "", rqname, i, "일자")
+            individual = self._comm_get_data(trcode, "", rqname, i, "개인투자자")
+            for_retail = self._comm_get_data(trcode, "", rqname, i, "외국인투자자")
+            institution = self._comm_get_data(trcode, "", rqname, i, "기관계")
+            financial = self._comm_get_data(trcode, "", rqname, i, "금융투자")
+            insurance = self._comm_get_data(trcode, "", rqname, i, "보험")
+            trust = self._comm_get_data(trcode, "", rqname, i, "투신")
+            etc_finance = self._comm_get_data(trcode, "", rqname, i, "기타금융")
+            bank = self._comm_get_data(trcode, "", rqname, i, "은행")
+            pension = self._comm_get_data(trcode, "", rqname, i, "연기금등")
+            private = self._comm_get_data(trcode, "", rqname, i, "사모펀드")
+            nation = self._comm_get_data(trcode, "", rqname, i, "국가")
+            etc_corporate = self._comm_get_data(trcode, "", rqname, i, "기타법인")
+            foreign = self._comm_get_data(trcode, "", rqname, i, "내외국인")
+
+            update_data = {"date": int(date), \
+                           "individual": int(individual), \
+                           "foreign_retail": int(for_retail), \
+                           "institution": int(institution), \
+                           "financial": int(financial), \
+                           "insurance": int(insurance), \
+                           "trust": int(trust), \
+                           "etc_finance": int(etc_finance), \
+                           "bank": int(bank), \
+                           "pension": int(pension), \
+                           "private": int(private), \
+                           "nation": int(nation), \
+                           "etc_corporate": int(etc_corporate), \
+                           "foreign": int(foreign)}
+
+            self._add_data(self.buysell_state, update_data)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    stock = MongoConnector(USER, PW, IP, DB).client[DB]['practice']
+    start_time = time.time()
 
+    mongo = MongoClient("mongodb://{0}:{1}@{2}/{3}".format(USER, PW, IP, DB))
+    ohlcv = mongo.stock.ohlcv
     kiwoom = Kiwoom()
     kiwoom.comm_connect()
 
-    CODE = '039490'
-    name = kiwoom.get_master_code_name(CODE)
-    db_initializer = {"code": CODE, \
-                      "name": name, \
-                      "ohlcv": [], \
-                      "buy": [], \
-                      "sell": []}
-    stock.insert_one(db_initializer)
+    code = '039490'
+    name = kiwoom.get_master_code_name(code)
+
+    kiwoom.prepare_data()
 
     # opt10081 TR 요청
-    kiwoom.set_input_value("종목코드", CODE)
-    kiwoom.set_input_value("기준일자", "20170706")
+    kiwoom.set_input_value("종목코드", code)
+    kiwoom.set_input_value("기준일자", time.strftime('%Y%m%d'))
     kiwoom.set_input_value("수정주가구분", 1)
     kiwoom.comm_rq_data("opt10081_req", "opt10081", 0, "0101")
 
     while kiwoom.remained_data == True:
         time.sleep(TR_REQ_TIME_INTERVAL)
-        kiwoom.set_input_value("종목코드", "039490")
-        kiwoom.set_input_value("기준일자", "20170704")
+        kiwoom.set_input_value("종목코드", code)
+        kiwoom.set_input_value("기준일자", time.strftime('%Y%m%d'))
         kiwoom.set_input_value("수정주가구분", 1)
         kiwoom.comm_rq_data("opt10081_req", "opt10081", 2, "0101")
+
+    for buysell in [1, 2]:
+        if buysell == 1:
+            kiwoom.buysell_state = "buy"
+        elif buysell == 2:
+            kiwoom.buysell_state = "sell"
+
+        # opt10059 TR 요청
+        kiwoom.set_input_value("일자", time.strftime('%Y%m%d'))
+        kiwoom.set_input_value("종목코드", code)
+        kiwoom.set_input_value("금액수량구분", 2)
+        kiwoom.set_input_value("매매구분", buysell)
+        kiwoom.set_input_value("단위구분", 1)
+        kiwoom.comm_rq_data("opt10059_req", "opt10059", 0, "0101")
+
+        while kiwoom.remained_data == True:
+            time.sleep(TR_REQ_TIME_INTERVAL)
+            kiwoom.set_input_value("일자", time.strftime('%Y%m%d'))
+            kiwoom.set_input_value("종목코드", code)
+            kiwoom.set_input_value("금액수량구분", 2)
+            kiwoom.set_input_value("매매구분", buysell)
+            kiwoom.set_input_value("단위구분", 1)
+            kiwoom.comm_rq_data("opt10059_req", "opt10059", 2, "0101")
+
+    db_initializer = {"code": code, "name": name, "ohlcv": kiwoom.data["ohlcv"], "buy": kiwoom.data["buy"], "sell": kiwoom.data["sell"]}
+    ohlcv.insert_one(db_initializer)
+
+    print("--- %s seconds ---" % (time.time() - start_time))
