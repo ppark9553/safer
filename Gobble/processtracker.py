@@ -4,8 +4,8 @@ class ProcessTracker:
 
     def __init__(self):
         self.process_dict = {"starting": "Data collection starting", \
-                             "step_one": "Connecting to Kiwoom API and saving Kospi code list", \
-                             "step_one_finish": "Successfully downloaded Kospi list data to 'data' directory", \
+                             "step_one": "Connecting to Kiwoom API and saving Kospi code/name data", \
+                             "step_one_finish": "Successfully downloaded Kospi dict data to 'data' directory", \
                              "init_thread": "Initializing thread lock and queue", \
                              "finishing": "Project successfully finished"}
 
