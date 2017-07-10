@@ -1,0 +1,21 @@
+### Gobble: Mined and Keystone's data scraping engine.
+
+
+--- Need for Gobble ---
+
+1. Kiwoom OpenAPI has bad performance, initialization will take roughly 18 days if your database requires collection of all OHLCV, Buy, and Sell data
+
+2. Thus, borrow the power of pandas_datareader and other API's for initialization
+
+
+--- How Gobble runs ---
+
+1. Collects Kospi OHLCV data with: "pdreader.py"
+
+2. Collects Kospi, Kosdaq Buy, Sell data with: "kiwoom.py"
+
+3. Collects Kosdaq OHLCV data with: ""
+
+4. Connects to MongoDB with: "dbconnector.py"
+
+5. Threads processes concurrently running the aforementioned tasks: "gobble.py"
