@@ -18,4 +18,4 @@
 
 4. Connects to MongoDB with: "dbconnector.py"
 
-5. Threads processes concurrently running the aforementioned tasks: "gobble.py"
+5. Task manager: "gobble.py"
