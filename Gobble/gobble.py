@@ -1,12 +1,13 @@
 from kiwoom import Kiwoom
 from dbwrapper import MongoDB
 from pdreader import PDReader
+from webscraper import SejongScraper
 from processtracker import ProcessTracker, timeit
 
 from PyQt5.QtWidgets import *
 from PyQt5.QAxContainer import *
 from PyQt5.QtCore import *
-import os, time
+import os, time, json
 import _pickle as pickle
 from pathlib import Path
 
@@ -58,22 +59,50 @@ class Gobble(ProcessTracker):
         self.pdreader_started()
 
     @timeit
-    def init_kospi_ohlcv(self):
-        db = self.db
+    def save_kospi_ohlcv(self):
+        # task done by: pdreader.PDReader
+        # roughly 35 minutes
         pr = self.pr
-        self.initializing_kospi_ohlcv()
-        uninitialized = list()
+        self.saving_kospi_ohlcv()
+        notsaved = list()
         for code, name in pr.task.items():
             try:
                 self.starting_request(code, name)
                 df = pr.request_df(code)
                 ohlcv = pr.create_ohlcv(df)
                 db_initializer = pr.get_db_initializer(code, name, ohlcv)
-                db.initialize(db_initializer)
-                self.data_initialized()
+                with open("./data/stock/" + code + ".json", "w") as f:
+                    json.dump(db_initializer, f)
+                self.data_saved()
             except:
                 self.skipped_data(code, name)
-                uninitialized.append(code)
-        pickle_out = open("./data/kospi-uninitialized.pickle", "wb")
-        pickle.dump(uninitialized, pickle_out)
-        self.kospi_ohlcv_initialized()
+                notsaved.append(code)
+        pickle_out = open("./data/kospi-notsaved.pickle", "wb")
+        pickle.dump(notsaved, pickle_out)
+        self.data_saved()
+
+    @timeit
+    def start_sejongscraper(self):
+        self.ss = SejongScraper()
+        self.ss.set_tasks()
+
+    @timeit
+    def save_financial_sejong(self, market_type):
+        # task done by: webscraper.SejongScraper
+        # do after saving kospi ohlcv
+        ss = self.ss
+        notsaved = list()
+        task = ss.kospi_task if market_type == "kospi" else ss.kosdaq_task
+        for code, name in task.items():
+            try:
+                value_dict = ss.create_value(code)
+                with open("./data/stock/" + code + ".json") as f:
+                    data = json.load(f)
+                    data["annual"] = value_dict["annual"]
+                    data["quarter"] = value_dict["quarter"]
+                    json.dump(data, f)
+            except:
+                continue
+                notsaved.append(code)
+        pickle_out = open("./data/financial-notsaved.pickle", "wb")
+        pickle.dump(notsaved, pickle_out)

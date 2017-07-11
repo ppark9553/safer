@@ -20,8 +20,8 @@ class ProcessTracker:
                              "starting_pdreader": "Starting PDReader to initialize and update Kospi OHLCV data", \
                              "step_one_skipped": "Step one skipped, going back and running step one", \
                              "pdreader_started": "PDReader started, ready to initialize and update Kospi OHLCV data", \
-                             "initializing_kospi_ohlcv": "PDReader initializing Kospi OHLCV", \
-                             "data_initialized": "Data successfully initialized in database", \
+                             "saving_kospi_ohlcv": "PDReader saving Kospi OHLCV", \
+                             "data_saved": "Data successfully saved in 'data/stock'", \
                              "kospi_ohlcv_initialized": "Kospi OHLCV data initialized, check for errors", \
                              "finishing": "Project successfully finished"}
 
@@ -65,16 +65,16 @@ class ProcessTracker:
         return self.process_dict["pdreader_started"]
 
     @print_track
-    def initializing_kospi_ohlcv(self):
-        return self.process_dict["initializing_kospi_ohlcv"]
+    def saving_kospi_ohlcv(self):
+        return self.process_dict["saving_kospi_ohlcv"]
 
     @print_track
     def starting_request(self, code, name):
         return "Starting data collection for " + code + ", " + name
 
     @print_track
-    def data_initialized(self):
-        return self.process_dict["data_initialized"]
+    def data_saved(self):
+        return self.process_dict["data_saved"]
 
     @print_track
     def skipped_data(self, code, name):
